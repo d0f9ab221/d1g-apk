@@ -1,0 +1,44 @@
+/*
+  Firestore Security Rules
+  Replace 'YOUR_PROJECT_ID' with your actual Firebase Project ID.
+  These rules allow authenticated users to read and write messages.
+  The AI bot has a specific UID to allow it to post messages.
+*/
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow anyone to read messages, but only if they are ordered by time
+    match /messages/{messageId} {
+      allow read: if request.auth != null;
+      // Allow users to create messages if they are authenticated
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      // Allow the AI bot to create messages
+      allow create: if request.resource.data.uid == 'AI_BOT_ID';
+      // Deny updates and deletes for messages
+      allow update, delete: if false;
+    }
+  }
+}
+
+/*
+  Firebase Storage Security Rules
+  These rules allow authenticated users to upload profile pictures
+  and the AI bot to have a profile picture.
+*/
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload/read their own profile picture
+    match /profile_pics/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Allow the AI bot to have a profile picture
+    match /profile_pics/AI_BOT_ID/{fileName} {
+      allow read, write: if true; // Or restrict if needed
+    }
+    // Deny access to other files
+    match /{allPaths} {
+      allow read, write: if false;
+    }
+  }
+}
